@@ -841,10 +841,11 @@ func CreateUser(c *gin.Context) {
 }
 
 type ManageRequest struct {
-	Id     int    `json:"id"`
-	Action string `json:"action"`
-	Value  int    `json:"value"`
-	Mode   string `json:"mode"`
+	Id                      int    `json:"id"`
+	Action                  string `json:"action"`
+	Value                   int    `json:"value"`
+	Mode                    string `json:"mode"`
+	ParticipateInviteRebate bool   `json:"participate_invite_rebate"`
 }
 
 // ManageUser Only admin user can do this
@@ -919,12 +920,23 @@ func ManageUser(c *gin.Context) {
 				common.ApiErrorI18n(c, i18n.MsgUserQuotaChangeZero)
 				return
 			}
-			if err := model.IncreaseUserQuota(user.Id, req.Value, true); err != nil {
-				common.ApiError(c, err)
-				return
+			if req.ParticipateInviteRebate {
+				topUp, err := model.AdminAddQuotaWithInviteRebate(user.Id, req.Value)
+				if err != nil {
+					common.ApiError(c, err)
+					return
+				}
+				model.RecordLog(user.Id, model.LogTypeManage,
+					fmt.Sprintf("管理员(%s)增加用户额度 %s，并参与邀请返利，充值单号：%s",
+						adminName, logger.LogQuota(req.Value), topUp.TradeNo))
+			} else {
+				if err := model.IncreaseUserQuota(user.Id, req.Value, true); err != nil {
+					common.ApiError(c, err)
+					return
+				}
+				model.RecordLog(user.Id, model.LogTypeManage,
+					fmt.Sprintf("管理员(%s)增加用户额度 %s", adminName, logger.LogQuota(req.Value)))
 			}
-			model.RecordLog(user.Id, model.LogTypeManage,
-				fmt.Sprintf("管理员(%s)增加用户额度 %s", adminName, logger.LogQuota(req.Value)))
 		case "subtract":
 			if req.Value <= 0 {
 				common.ApiErrorI18n(c, i18n.MsgUserQuotaChangeZero)

@@ -36,6 +36,7 @@ export default function SettingsCreditLimit(props) {
     PreConsumedQuota: '',
     QuotaForInviter: '',
     QuotaForInvitee: '',
+    InviteTopupRebateRate: '',
     'quota_setting.enable_free_model_pre_consume': true,
   });
   const refForm = useRef();
@@ -50,6 +51,10 @@ export default function SettingsCreditLimit(props) {
         value = String(inputs[item.key]);
       } else {
         value = inputs[item.key];
+      }
+      if (item.key === 'InviteTopupRebateRate') {
+        const percentValue = Number(inputs[item.key] || 0);
+        value = String(Math.round(percentValue * 100));
       }
       return API.put('/api/option/', {
         key: item.key,
@@ -80,7 +85,11 @@ export default function SettingsCreditLimit(props) {
     const currentInputs = {};
     for (let key in props.options) {
       if (Object.keys(inputs).includes(key)) {
-        currentInputs[key] = props.options[key];
+        if (key === 'InviteTopupRebateRate') {
+          currentInputs[key] = String(Number(props.options[key] || 0) / 100);
+        } else {
+          currentInputs[key] = props.options[key];
+        }
       }
     }
     setInputs(currentInputs);
@@ -132,17 +141,18 @@ export default function SettingsCreditLimit(props) {
               </Col>
               <Col xs={24} sm={12} md={8} lg={8} xl={8}>
                 <Form.InputNumber
-                  label={t('邀请新用户奖励额度')}
-                  field={'QuotaForInviter'}
+                  label={t('下级预存返现比例')}
+                  field={'InviteTopupRebateRate'}
                   step={1}
                   min={0}
-                  suffix={'Token'}
+                  max={100}
+                  suffix={'%'}
                   extraText={''}
-                  placeholder={t('例如：2000')}
+                  placeholder={t('例如：5')}
                   onChange={(value) =>
                     setInputs({
                       ...inputs,
-                      QuotaForInviter: String(value),
+                      InviteTopupRebateRate: String(value),
                     })
                   }
                 />
@@ -151,7 +161,7 @@ export default function SettingsCreditLimit(props) {
             <Row>
               <Col xs={24} sm={12} md={8} lg={8} xl={6}>
                 <Form.InputNumber
-                  label={t('新用户使用邀请码奖励额度')}
+                  label={t('被邀请用户注册赠送额度')}
                   field={'QuotaForInvitee'}
                   step={1}
                   min={0}

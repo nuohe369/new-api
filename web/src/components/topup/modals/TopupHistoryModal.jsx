@@ -49,6 +49,7 @@ const STATUS_CONFIG = {
 
 // 支付方式映射
 const PAYMENT_METHOD_MAP = {
+  admin_manual: '管理员加款',
   stripe: 'Stripe',
   creem: 'Creem',
   waffo: 'Waffo',

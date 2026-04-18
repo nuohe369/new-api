@@ -31,6 +31,117 @@ import {
 import { IconMore } from '@douyinfe/semi-icons';
 import { renderGroup, renderNumber, renderQuota } from '../../../helpers';
 
+const UserActionsCell = ({
+  record,
+  setEditingUser,
+  setShowEditUser,
+  showPromoteModal,
+  showDemoteModal,
+  showEnableDisableModal,
+  showDeleteModal,
+  showResetPasskeyModal,
+  showResetTwoFAModal,
+  showUserSubscriptionsModal,
+  showUserInviteRebateModal,
+  t,
+}) => {
+  const [moreVisible, setMoreVisible] = React.useState(false);
+
+  const handleMoreAction = (callback) => {
+    setMoreVisible(false);
+    callback(record);
+  };
+
+  const moreMenu = [
+    {
+      node: 'item',
+      name: t('订阅管理'),
+      onClick: () => handleMoreAction(showUserSubscriptionsModal),
+    },
+    {
+      node: 'item',
+      name: t('邀请返现'),
+      onClick: () => handleMoreAction(showUserInviteRebateModal),
+    },
+    {
+      node: 'divider',
+    },
+    {
+      node: 'item',
+      name: t('重置 Passkey'),
+      onClick: () => handleMoreAction(showResetPasskeyModal),
+    },
+    {
+      node: 'item',
+      name: t('重置 2FA'),
+      onClick: () => handleMoreAction(showResetTwoFAModal),
+    },
+    {
+      node: 'divider',
+    },
+    {
+      node: 'item',
+      name: t('注销'),
+      type: 'danger',
+      onClick: () => handleMoreAction(showDeleteModal),
+    },
+  ];
+
+  return (
+    <Space>
+      {record.status === 1 ? (
+        <Button
+          type='danger'
+          size='small'
+          onClick={() => showEnableDisableModal(record, 'disable')}
+        >
+          {t('禁用')}
+        </Button>
+      ) : (
+        <Button
+          size='small'
+          onClick={() => showEnableDisableModal(record, 'enable')}
+        >
+          {t('启用')}
+        </Button>
+      )}
+      <Button
+        type='tertiary'
+        size='small'
+        onClick={() => {
+          setEditingUser(record);
+          setShowEditUser(true);
+        }}
+      >
+        {t('编辑')}
+      </Button>
+      <Button
+        type='warning'
+        size='small'
+        onClick={() => showPromoteModal(record)}
+      >
+        {t('提升')}
+      </Button>
+      <Button
+        type='secondary'
+        size='small'
+        onClick={() => showDemoteModal(record)}
+      >
+        {t('降级')}
+      </Button>
+      <Dropdown
+        menu={moreMenu}
+        trigger='click'
+        position='bottomRight'
+        visible={moreVisible}
+        onVisibleChange={setMoreVisible}
+      >
+        <Button type='tertiary' size='small' icon={<IconMore />} />
+      </Dropdown>
+    </Space>
+  );
+};
+
 /**
  * Render user role
  */
@@ -184,6 +295,9 @@ const renderInviteInfo = (text, record, t) => {
           {t('收益')}: {renderQuota(record.aff_history_quota)}
         </Tag>
         <Tag color='white' shape='circle' className='!text-xs'>
+          {t('待划转')}: {renderQuota(record.aff_quota)}
+        </Tag>
+        <Tag color='white' shape='circle' className='!text-xs'>
           {record.inviter_id === 0
             ? t('无邀请人')
             : `${t('邀请人')}: ${record.inviter_id}`}
@@ -209,6 +323,7 @@ const renderOperations = (
     showResetPasskeyModal,
     showResetTwoFAModal,
     showUserSubscriptionsModal,
+    showUserInviteRebateModal,
     t,
   },
 ) => {
@@ -216,82 +331,21 @@ const renderOperations = (
     return <></>;
   }
 
-  const moreMenu = [
-    {
-      node: 'item',
-      name: t('订阅管理'),
-      onClick: () => showUserSubscriptionsModal(record),
-    },
-    {
-      node: 'divider',
-    },
-    {
-      node: 'item',
-      name: t('重置 Passkey'),
-      onClick: () => showResetPasskeyModal(record),
-    },
-    {
-      node: 'item',
-      name: t('重置 2FA'),
-      onClick: () => showResetTwoFAModal(record),
-    },
-    {
-      node: 'divider',
-    },
-    {
-      node: 'item',
-      name: t('注销'),
-      type: 'danger',
-      onClick: () => showDeleteModal(record),
-    },
-  ];
-
   return (
-    <Space>
-      {record.status === 1 ? (
-        <Button
-          type='danger'
-          size='small'
-          onClick={() => showEnableDisableModal(record, 'disable')}
-        >
-          {t('禁用')}
-        </Button>
-      ) : (
-        <Button
-          size='small'
-          onClick={() => showEnableDisableModal(record, 'enable')}
-        >
-          {t('启用')}
-        </Button>
-      )}
-      <Button
-        type='tertiary'
-        size='small'
-        onClick={() => {
-          setEditingUser(record);
-          setShowEditUser(true);
-        }}
-      >
-        {t('编辑')}
-      </Button>
-      <Button
-        type='warning'
-        size='small'
-        onClick={() => showPromoteModal(record)}
-      >
-        {t('提升')}
-      </Button>
-      <Button
-        type='secondary'
-        size='small'
-        onClick={() => showDemoteModal(record)}
-      >
-        {t('降级')}
-      </Button>
-      <Dropdown menu={moreMenu} trigger='click' position='bottomRight'>
-        <Button type='tertiary' size='small' icon={<IconMore />} />
-      </Dropdown>
-    </Space>
+    <UserActionsCell
+      record={record}
+      setEditingUser={setEditingUser}
+      setShowEditUser={setShowEditUser}
+      showPromoteModal={showPromoteModal}
+      showDemoteModal={showDemoteModal}
+      showEnableDisableModal={showEnableDisableModal}
+      showDeleteModal={showDeleteModal}
+      showResetPasskeyModal={showResetPasskeyModal}
+      showResetTwoFAModal={showResetTwoFAModal}
+      showUserSubscriptionsModal={showUserSubscriptionsModal}
+      showUserInviteRebateModal={showUserInviteRebateModal}
+      t={t}
+    />
   );
 };
 
@@ -309,6 +363,7 @@ export const getUsersColumns = ({
   showResetPasskeyModal,
   showResetTwoFAModal,
   showUserSubscriptionsModal,
+  showUserInviteRebateModal,
 }) => {
   return [
     {
@@ -366,6 +421,7 @@ export const getUsersColumns = ({
           showResetPasskeyModal,
           showResetTwoFAModal,
           showUserSubscriptionsModal,
+          showUserInviteRebateModal,
           t,
         }),
     },

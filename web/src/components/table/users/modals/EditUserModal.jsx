@@ -47,6 +47,7 @@ import {
   InputNumber,
   RadioGroup,
   Radio,
+  Checkbox,
 } from '@douyinfe/semi-ui';
 import {
   IconUser,
@@ -68,6 +69,8 @@ const EditUserModal = (props) => {
   const [adjustQuotaLocal, setAdjustQuotaLocal] = useState('');
   const [adjustAmountLocal, setAdjustAmountLocal] = useState('');
   const [adjustMode, setAdjustMode] = useState('add');
+  const [participateInviteRebate, setParticipateInviteRebate] =
+    useState(false);
   const [adjustLoading, setAdjustLoading] = useState(false);
   const isMobile = useIsMobile();
   const [groupOptions, setGroupOptions] = useState([]);
@@ -178,6 +181,8 @@ const EditUserModal = (props) => {
         action: 'add_quota',
         mode: adjustMode,
         value: adjustMode === 'override' ? quotaVal : Math.abs(quotaVal),
+        participate_invite_rebate:
+          adjustMode === 'add' ? participateInviteRebate : false,
       });
       const { success, message } = res.data;
       if (success) {
@@ -185,6 +190,7 @@ const EditUserModal = (props) => {
         setAdjustModalOpen(false);
         setAdjustQuotaLocal('');
         setAdjustAmountLocal('');
+        setParticipateInviteRebate(false);
         const userRes = await API.get(`/api/user/${userId}`);
         if (userRes.data.success) {
           const data = userRes.data.data;
@@ -470,6 +476,7 @@ const EditUserModal = (props) => {
           setAdjustQuotaLocal('');
           setAdjustAmountLocal('');
           setAdjustMode('add');
+          setParticipateInviteRebate(false);
         }}
         confirmLoading={adjustLoading}
         closable={null}
@@ -496,6 +503,7 @@ const EditUserModal = (props) => {
               setAdjustMode(e.target.value);
               setAdjustQuotaLocal('');
               setAdjustAmountLocal('');
+              setParticipateInviteRebate(false);
             }}
             style={{ width: '100%' }}
           >
@@ -530,6 +538,23 @@ const EditUserModal = (props) => {
             showClear
           />
         </div>
+        {adjustMode === 'add' && (
+          <div className='mb-3'>
+            <Checkbox
+              checked={participateInviteRebate}
+              onChange={(e) => setParticipateInviteRebate(e.target.checked)}
+            >
+              <div className='flex flex-col'>
+                <Text>{t('参与邀请返利')}</Text>
+                <Text type='secondary' size='small'>
+                  {t(
+                    '开启后会生成一笔成功充值记录，并按当前邀请返现比例给邀请人结算收益',
+                  )}
+                </Text>
+              </div>
+            </Checkbox>
+          </div>
+        )}
         <div
           className='text-xs cursor-pointer mt-2'
           style={{ color: 'var(--semi-color-text-2)' }}
