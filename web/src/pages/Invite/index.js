@@ -19,6 +19,6 @@ For commercial licensing, please contact support@quantumnous.com
 
 import TopUp from '../../components/topup';
 
-export default function TopUpPage() {
-  return <TopUp mode='wallet' />;
+export default function InvitePage() {
+  return <TopUp mode='invite' />;
 }

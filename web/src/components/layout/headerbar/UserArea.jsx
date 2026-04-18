@@ -20,7 +20,7 @@ For commercial licensing, please contact support@quantumnous.com
 import React, { useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { Avatar, Button, Dropdown, Typography } from '@douyinfe/semi-ui';
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, Gift } from 'lucide-react';
 import {
   IconExit,
   IconUserSetting,
@@ -99,6 +99,20 @@ const UserArea = ({
                     className='text-gray-500 dark:text-gray-400'
                   />
                   <span>{t('钱包管理')}</span>
+                </div>
+              </Dropdown.Item>
+              <Dropdown.Item
+                onClick={() => {
+                  navigate('/console/invite');
+                }}
+                className='!px-3 !py-1.5 !text-sm !text-semi-color-text-0 hover:!bg-semi-color-fill-1 dark:!text-gray-200 dark:hover:!bg-blue-500 dark:hover:!text-white'
+              >
+                <div className='flex items-center gap-2'>
+                  <Gift
+                    size={14}
+                    className='text-gray-500 dark:text-gray-400'
+                  />
+                  <span>{t('邀请有礼')}</span>
                 </div>
               </Dropdown.Item>
               <Dropdown.Item
