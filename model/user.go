@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -17,6 +18,8 @@ import (
 )
 
 const UserNameMaxLength = 20
+
+var affCodeRegexp = regexp.MustCompile(`^[A-Za-z0-9_-]{1,32}$`)
 
 // User if you add sensitive fields, don't forget to clean them in setupLogin function.
 // Otherwise, the sensitive information will be saved on local storage in plain text!
@@ -312,6 +315,64 @@ func GetUserIdByAffCode(affCode string) (int, error) {
 	return user.Id, err
 }
 
+func normalizeAffCode(affCode string) string {
+	return strings.TrimSpace(affCode)
+}
+
+func ValidateAffCodeFormat(affCode string) error {
+	if affCode == "" {
+		return nil
+	}
+	if !affCodeRegexp.MatchString(affCode) {
+		return errors.New("邀请码只能包含字母、数字、下划线和中划线，长度为 1-32 位")
+	}
+	return nil
+}
+
+func PrepareAffCodeWithTx(tx *gorm.DB, affCode string, excludeUserId int) (string, error) {
+	if tx == nil {
+		tx = DB
+	}
+	affCode = normalizeAffCode(affCode)
+	if affCode != "" {
+		if err := ValidateAffCodeFormat(affCode); err != nil {
+			return "", err
+		}
+		var count int64
+		query := tx.Unscoped().Model(&User{}).Where("aff_code = ?", affCode)
+		if excludeUserId > 0 {
+			query = query.Where("id <> ?", excludeUserId)
+		}
+		if err := query.Count(&count).Error; err != nil {
+			return "", err
+		}
+		if count > 0 {
+			return "", errors.New("邀请码已存在")
+		}
+		return affCode, nil
+	}
+
+	for i := 0; i < 20; i++ {
+		candidate := common.GetRandomString(4)
+		var count int64
+		query := tx.Unscoped().Model(&User{}).Where("aff_code = ?", candidate)
+		if excludeUserId > 0 {
+			query = query.Where("id <> ?", excludeUserId)
+		}
+		if err := query.Count(&count).Error; err != nil {
+			return "", err
+		}
+		if count == 0 {
+			return candidate, nil
+		}
+	}
+	return "", errors.New("生成邀请码失败，请稍后重试")
+}
+
+func PrepareAffCode(affCode string, excludeUserId int) (string, error) {
+	return PrepareAffCodeWithTx(DB, affCode, excludeUserId)
+}
+
 func DeleteUserById(id int) (err error) {
 	if id == 0 {
 		return errors.New("id 为空！")
@@ -384,7 +445,10 @@ func (user *User) Insert(inviterId int) error {
 	}
 	user.Quota = common.QuotaForNewUser
 	//user.SetAccessToken(common.GetUUID())
-	user.AffCode = common.GetRandomString(4)
+	user.AffCode, err = PrepareAffCode(user.AffCode, 0)
+	if err != nil {
+		return err
+	}
 
 	// 初始化用户设置，包括默认的边栏配置
 	if user.Setting == "" {
@@ -438,7 +502,10 @@ func (user *User) InsertWithTx(tx *gorm.DB, inviterId int) error {
 		}
 	}
 	user.Quota = common.QuotaForNewUser
-	user.AffCode = common.GetRandomString(4)
+	user.AffCode, err = PrepareAffCodeWithTx(tx, user.AffCode, 0)
+	if err != nil {
+		return err
+	}
 
 	// 初始化用户设置
 	if user.Setting == "" {
@@ -515,6 +582,7 @@ func (user *User) Edit(updatePassword bool) error {
 		"display_name": newUser.DisplayName,
 		"group":        newUser.Group,
 		"remark":       newUser.Remark,
+		"aff_code":     newUser.AffCode,
 	}
 	if updatePassword {
 		updates["password"] = newUser.Password

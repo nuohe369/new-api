@@ -353,7 +353,14 @@ func GetAffCode(c *gin.Context) {
 		return
 	}
 	if user.AffCode == "" {
-		user.AffCode = common.GetRandomString(4)
+		user.AffCode, err = model.PrepareAffCode("", user.Id)
+		if err != nil {
+			c.JSON(http.StatusOK, gin.H{
+				"success": false,
+				"message": err.Error(),
+			})
+			return
+		}
 		if err := user.Update(false); err != nil {
 			c.JSON(http.StatusOK, gin.H{
 				"success": false,
@@ -568,6 +575,24 @@ func UpdateUser(c *gin.Context) {
 	if myRole <= updatedUser.Role && myRole != common.RoleRootUser {
 		common.ApiErrorI18n(c, i18n.MsgUserCannotCreateHigherLevel)
 		return
+	}
+	updatedUser.AffCode = strings.TrimSpace(updatedUser.AffCode)
+	if updatedUser.AffCode == "" {
+		if originUser.AffCode != "" {
+			updatedUser.AffCode = originUser.AffCode
+		} else {
+			updatedUser.AffCode, err = model.PrepareAffCode("", updatedUser.Id)
+			if err != nil {
+				common.ApiError(c, err)
+				return
+			}
+		}
+	} else {
+		updatedUser.AffCode, err = model.PrepareAffCode(updatedUser.AffCode, updatedUser.Id)
+		if err != nil {
+			common.ApiError(c, err)
+			return
+		}
 	}
 	if updatedUser.Password == "$I_LOVE_U" {
 		updatedUser.Password = "" // rollback to what it should be
@@ -805,6 +830,7 @@ func CreateUser(c *gin.Context) {
 	var user model.User
 	err := json.NewDecoder(c.Request.Body).Decode(&user)
 	user.Username = strings.TrimSpace(user.Username)
+	user.AffCode = strings.TrimSpace(user.AffCode)
 	if err != nil || user.Username == "" || user.Password == "" {
 		common.ApiErrorI18n(c, i18n.MsgInvalidParams)
 		return
@@ -827,6 +853,14 @@ func CreateUser(c *gin.Context) {
 		Password:    user.Password,
 		DisplayName: user.DisplayName,
 		Role:        user.Role, // 保持管理员设置的角色
+		AffCode:     user.AffCode,
+	}
+	if cleanUser.AffCode != "" {
+		cleanUser.AffCode, err = model.PrepareAffCode(cleanUser.AffCode, 0)
+		if err != nil {
+			common.ApiError(c, err)
+			return
+		}
 	}
 	if err := cleanUser.Insert(0); err != nil {
 		common.ApiError(c, err)

@@ -85,6 +85,7 @@ const EditUserModal = (props) => {
   const getInitValues = () => ({
     username: '',
     display_name: '',
+    aff_code: '',
     password: '',
     github_id: '',
     oidc_id: '',
@@ -328,6 +329,20 @@ const EditUserModal = (props) => {
                         showClear
                       />
                     </Col>
+
+                    {userId && (
+                      <Col span={24}>
+                        <Form.Input
+                          field='aff_code'
+                          label={t('邀请码')}
+                          placeholder={t('请输入自定义邀请码')}
+                          showClear
+                          extraText={t(
+                            '支持字母、数字、下划线和中划线，留空将保持当前邀请码',
+                          )}
+                        />
+                      </Col>
+                    )}
 
                     <Col span={24}>
                       <Form.Input

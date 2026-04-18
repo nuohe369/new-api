@@ -47,6 +47,7 @@ const AddUserModal = (props) => {
   const getInitValues = () => ({
     username: '',
     display_name: '',
+    aff_code: '',
     password: '',
     remark: '',
   });
@@ -163,6 +164,17 @@ const AddUserModal = (props) => {
                       placeholder={t('请输入密码')}
                       rules={[{ required: true, message: t('请输入密码') }]}
                       showClear
+                    />
+                  </Col>
+                  <Col span={24}>
+                    <Form.Input
+                      field='aff_code'
+                      label={t('邀请码')}
+                      placeholder={t('请输入自定义邀请码')}
+                      showClear
+                      extraText={t(
+                        '支持字母、数字、下划线和中划线，留空则自动生成随机邀请码',
+                      )}
                     />
                   </Col>
                   <Col span={24}>
