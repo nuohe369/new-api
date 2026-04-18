@@ -126,6 +126,10 @@ func (*StripeAdaptor) RequestPay(c *gin.Context, req *StripePayRequest) {
 }
 
 func RequestStripeAmount(c *gin.Context) {
+	if isPaymentDisabled() {
+		c.JSON(200, gin.H{"message": "error", "data": "支付功能已关闭"})
+		return
+	}
 	var req StripePayRequest
 	err := c.ShouldBindJSON(&req)
 	if err != nil {
@@ -136,6 +140,10 @@ func RequestStripeAmount(c *gin.Context) {
 }
 
 func RequestStripePay(c *gin.Context) {
+	if isPaymentDisabled() {
+		c.JSON(200, gin.H{"message": "error", "data": "支付功能已关闭"})
+		return
+	}
 	var req StripePayRequest
 	err := c.ShouldBindJSON(&req)
 	if err != nil {

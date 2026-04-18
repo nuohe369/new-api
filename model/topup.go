@@ -64,6 +64,8 @@ func ComputeCreditedQuotaForTopUp(topUp *TopUp) int {
 	switch topUp.PaymentMethod {
 	case "admin_manual":
 		return int(topUp.Amount)
+	case "redemption_code":
+		return int(topUp.Amount)
 	case "stripe":
 		dQuotaPerUnit := decimal.NewFromFloat(common.QuotaPerUnit)
 		return int(decimal.NewFromFloat(topUp.Money).Mul(dQuotaPerUnit).IntPart())

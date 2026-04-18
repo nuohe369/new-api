@@ -70,6 +70,7 @@ const EditRedemptionModal = (props) => {
     amount: Number(quotaToDisplayAmount(100000).toFixed(6)),
     count: 1,
     expired_time: null,
+    participate_invite_rebate: false,
   });
 
   const handleCancel = () => {
@@ -272,6 +273,17 @@ const EditRedemptionModal = (props) => {
                         placeholder={t('选择过期时间（可选，留空为永久）')}
                         style={{ width: '100%' }}
                         showClear
+                      />
+                    </Col>
+                    <Col span={24}>
+                      <Form.Switch
+                        field='participate_invite_rebate'
+                        label={t('参与邀请返利')}
+                        checkedText={t('开')}
+                        uncheckedText={t('关')}
+                        extraText={t(
+                          '开启后，此兑换码兑换成功时会生成一笔充值记录，并按当前邀请返现比例给邀请人结算收益',
+                        )}
                       />
                     </Col>
                   </Row>

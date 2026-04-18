@@ -23,6 +23,10 @@ type SubscriptionEpayPayRequest struct {
 }
 
 func SubscriptionRequestEpay(c *gin.Context) {
+	if isPaymentDisabled() {
+		common.ApiErrorMsg(c, "支付功能已关闭")
+		return
+	}
 	var req SubscriptionEpayPayRequest
 	if err := c.ShouldBindJSON(&req); err != nil || req.PlanId <= 0 {
 		common.ApiErrorMsg(c, "参数错误")

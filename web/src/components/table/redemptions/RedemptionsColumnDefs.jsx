@@ -105,6 +105,21 @@ export const getRedemptionsColumns = ({
       },
     },
     {
+      title: t('邀请返利'),
+      dataIndex: 'participate_invite_rebate',
+      render: (text) => {
+        return text ? (
+          <Tag color='green' shape='circle'>
+            {t('参与')}
+          </Tag>
+        ) : (
+          <Tag color='grey' shape='circle'>
+            {t('不参与')}
+          </Tag>
+        );
+      },
+    },
+    {
       title: t('额度'),
       dataIndex: 'quota',
       render: (text) => {

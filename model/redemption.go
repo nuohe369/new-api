@@ -12,18 +12,19 @@ import (
 )
 
 type Redemption struct {
-	Id           int            `json:"id"`
-	UserId       int            `json:"user_id"`
-	Key          string         `json:"key" gorm:"type:char(32);uniqueIndex"`
-	Status       int            `json:"status" gorm:"default:1"`
-	Name         string         `json:"name" gorm:"index"`
-	Quota        int            `json:"quota" gorm:"default:100"`
-	CreatedTime  int64          `json:"created_time" gorm:"bigint"`
-	RedeemedTime int64          `json:"redeemed_time" gorm:"bigint"`
-	Count        int            `json:"count" gorm:"-:all"` // only for api request
-	UsedUserId   int            `json:"used_user_id"`
-	DeletedAt    gorm.DeletedAt `gorm:"index"`
-	ExpiredTime  int64          `json:"expired_time" gorm:"bigint"` // 过期时间，0 表示不过期
+	Id                      int            `json:"id"`
+	UserId                  int            `json:"user_id"`
+	Key                     string         `json:"key" gorm:"type:char(32);uniqueIndex"`
+	Status                  int            `json:"status" gorm:"default:1"`
+	Name                    string         `json:"name" gorm:"index"`
+	Quota                   int            `json:"quota" gorm:"default:100"`
+	CreatedTime             int64          `json:"created_time" gorm:"bigint"`
+	RedeemedTime            int64          `json:"redeemed_time" gorm:"bigint"`
+	Count                   int            `json:"count" gorm:"-:all"` // only for api request
+	UsedUserId              int            `json:"used_user_id"`
+	ParticipateInviteRebate bool           `json:"participate_invite_rebate" gorm:"default:false"`
+	DeletedAt               gorm.DeletedAt `gorm:"index"`
+	ExpiredTime             int64          `json:"expired_time" gorm:"bigint"` // 过期时间，0 表示不过期
 }
 
 func GetAllRedemptions(startIdx int, num int) (redemptions []*Redemption, total int64, err error) {
@@ -137,11 +138,30 @@ func Redeem(key string, userId int) (quota int, err error) {
 		if redemption.ExpiredTime != 0 && redemption.ExpiredTime < common.GetTimestamp() {
 			return errors.New("该兑换码已过期")
 		}
+		now := common.GetTimestamp()
 		err = tx.Model(&User{}).Where("id = ?", userId).Update("quota", gorm.Expr("quota + ?", redemption.Quota)).Error
 		if err != nil {
 			return err
 		}
-		redemption.RedeemedTime = common.GetTimestamp()
+		if redemption.ParticipateInviteRebate {
+			topUp := &TopUp{
+				UserId:        userId,
+				Amount:        int64(redemption.Quota),
+				Money:         0,
+				TradeNo:       fmt.Sprintf("REDEEM-U%d-R%d-%d-%s", userId, redemption.Id, now, common.GetRandomString(6)),
+				PaymentMethod: "redemption_code",
+				CreateTime:    now,
+				CompleteTime:  now,
+				Status:        common.TopUpStatusSuccess,
+			}
+			if err = tx.Create(topUp).Error; err != nil {
+				return err
+			}
+			if err = settleInviteRebateTx(tx, topUp, redemption.Quota); err != nil {
+				return err
+			}
+		}
+		redemption.RedeemedTime = now
 		redemption.Status = common.RedemptionCodeStatusUsed
 		redemption.UsedUserId = userId
 		err = tx.Save(redemption).Error
@@ -169,7 +189,7 @@ func (redemption *Redemption) SelectUpdate() error {
 // Update Make sure your token's fields is completed, because this will update non-zero values
 func (redemption *Redemption) Update() error {
 	var err error
-	err = DB.Model(redemption).Select("name", "status", "quota", "redeemed_time", "expired_time").Updates(redemption).Error
+	err = DB.Model(redemption).Select("name", "status", "quota", "redeemed_time", "expired_time", "participate_invite_rebate").Updates(redemption).Error
 	return err
 }
 

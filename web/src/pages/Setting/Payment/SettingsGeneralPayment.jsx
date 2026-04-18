@@ -32,6 +32,7 @@ export default function SettingsGeneralPayment(props) {
   const [loading, setLoading] = useState(false);
   const [inputs, setInputs] = useState({
     ServerAddress: '',
+    DisablePayment: false,
   });
   const formApiRef = useRef(null);
 
@@ -39,6 +40,7 @@ export default function SettingsGeneralPayment(props) {
     if (props.options && formApiRef.current) {
       const currentInputs = {
         ServerAddress: props.options.ServerAddress || '',
+        DisablePayment: !!props.options.DisablePayment,
       };
       setInputs(currentInputs);
       formApiRef.current.setValues(currentInputs);
@@ -49,19 +51,28 @@ export default function SettingsGeneralPayment(props) {
     setInputs(values);
   };
 
-  const submitServerAddress = async () => {
+  const submitGeneralPayment = async () => {
     setLoading(true);
     try {
       let ServerAddress = removeTrailingSlash(inputs.ServerAddress);
-      const res = await API.put('/api/option/', {
-        key: 'ServerAddress',
-        value: ServerAddress,
-      });
-      if (res.data.success) {
+      const results = await Promise.all([
+        API.put('/api/option/', {
+          key: 'ServerAddress',
+          value: ServerAddress,
+        }),
+        API.put('/api/option/', {
+          key: 'DisablePayment',
+          value: !!inputs.DisablePayment,
+        }),
+      ]);
+      const errorResults = results.filter((res) => !res.data.success);
+      if (errorResults.length === 0) {
         showSuccess(t('更新成功'));
         props.refresh && props.refresh();
       } else {
-        showError(res.data.message);
+        errorResults.forEach((res) => {
+          showError(res.data.message);
+        });
       }
     } catch (error) {
       showError(t('更新失败'));
@@ -86,7 +97,18 @@ export default function SettingsGeneralPayment(props) {
               '该服务器地址将影响支付回调地址以及默认首页展示的地址，请确保正确配置',
             )}
           />
-          <Button onClick={submitServerAddress}>{t('更新服务器地址')}</Button>
+          <Form.Switch
+            field='DisablePayment'
+            label={t('关闭支付功能')}
+            checkedText={t('开')}
+            uncheckedText={t('关')}
+            extraText={t(
+              '开启后将关闭在线充值与订阅购买，钱包管理页面仅保留账户统计和兑换码充值',
+            )}
+          />
+          <Button onClick={submitGeneralPayment}>
+            {t('更新通用支付设置')}
+          </Button>
         </Form.Section>
       </Form>
     </Spin>

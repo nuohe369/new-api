@@ -97,6 +97,7 @@ const RechargeCard = ({
   activeSubscriptions = [],
   allSubscriptions = [],
   reloadSubscriptionSelf,
+  paymentDisabled = false,
 }) => {
   const onlineFormApiRef = useRef(null);
   const redeemFormApiRef = useRef(null);
@@ -104,7 +105,7 @@ const RechargeCard = ({
   const showAmountSkeleton = useMinimumLoadingTime(amountLoading);
   const [activeTab, setActiveTab] = useState('topup');
   const shouldShowSubscription =
-    !subscriptionLoading && subscriptionPlans.length > 0;
+    !paymentDisabled && !subscriptionLoading && subscriptionPlans.length > 0;
 
   useEffect(() => {
     if (initialTabSetRef.current) return;
@@ -227,6 +228,13 @@ const RechargeCard = ({
           <div className='py-8 flex justify-center'>
             <Spin size='large' />
           </div>
+        ) : paymentDisabled ? (
+          <Banner
+            type='info'
+            description={t('管理员已关闭支付功能，当前仅支持兑换码充值。')}
+            className='!rounded-xl'
+            closeIcon={null}
+          />
         ) : enableOnlineTopUp || enableStripeTopUp || enableCreemTopUp || enableWaffoTopUp ? (
           <Form
             getFormApi={(api) => (onlineFormApiRef.current = api)}
@@ -597,7 +605,7 @@ const RechargeCard = ({
             showClear
             style={{ width: '100%' }}
             extraText={
-              topUpLink && (
+              topUpLink && !paymentDisabled && (
                 <Text type='tertiary'>
                   {t('在找兑换码？')}
                   <Text
@@ -629,16 +637,22 @@ const RechargeCard = ({
             <Typography.Text className='text-lg font-medium'>
               {t('账户充值')}
             </Typography.Text>
-            <div className='text-xs'>{t('多种充值方式，安全便捷')}</div>
+            <div className='text-xs'>
+              {paymentDisabled
+                ? t('当前仅支持兑换码充值')
+                : t('多种充值方式，安全便捷')}
+            </div>
           </div>
         </div>
-        <Button
-          icon={<Receipt size={16} />}
-          theme='solid'
-          onClick={onOpenHistory}
-        >
-          {t('账单')}
-        </Button>
+        {!paymentDisabled && (
+          <Button
+            icon={<Receipt size={16} />}
+            theme='solid'
+            onClick={onOpenHistory}
+          >
+            {t('账单')}
+          </Button>
+        )}
       </div>
 
       {shouldShowSubscription ? (

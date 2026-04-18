@@ -58,6 +58,9 @@ const TopUp = ({ mode = 'all' }) => {
   const [enableOnlineTopUp, setEnableOnlineTopUp] = useState(
     statusState?.status?.enable_online_topup || false,
   );
+  const [paymentDisabled, setPaymentDisabled] = useState(
+    statusState?.status?.disable_payment || false,
+  );
   const [priceRatio, setPriceRatio] = useState(statusState?.status?.price || 1);
 
   const [enableStripeTopUp, setEnableStripeTopUp] = useState(
@@ -149,6 +152,10 @@ const TopUp = ({ mode = 'all' }) => {
   };
 
   const openTopUpLink = () => {
+    if (paymentDisabled) {
+      showError(t('支付功能已关闭'));
+      return;
+    }
     if (!topUpLink) {
       showError(t('超级管理员未设置充值链接！'));
       return;
@@ -157,6 +164,10 @@ const TopUp = ({ mode = 'all' }) => {
   };
 
   const preTopUp = async (payment) => {
+    if (paymentDisabled) {
+      showError(t('支付功能已关闭'));
+      return;
+    }
     if (payment === 'stripe') {
       if (!enableStripeTopUp) {
         showError(t('管理员未开启Stripe充值！'));
@@ -191,6 +202,10 @@ const TopUp = ({ mode = 'all' }) => {
   };
 
   const onlineTopUp = async () => {
+    if (paymentDisabled) {
+      showError(t('支付功能已关闭'));
+      return;
+    }
     if (payWay === 'stripe') {
       // Stripe 支付处理
       if (amount === 0) {
@@ -271,6 +286,10 @@ const TopUp = ({ mode = 'all' }) => {
   };
 
   const creemPreTopUp = async (product) => {
+    if (paymentDisabled) {
+      showError(t('支付功能已关闭'));
+      return;
+    }
     if (!enableCreemTopUp) {
       showError(t('管理员未开启 Creem 充值！'));
       return;
@@ -280,6 +299,10 @@ const TopUp = ({ mode = 'all' }) => {
   };
 
   const onlineCreemTopUp = async () => {
+    if (paymentDisabled) {
+      showError(t('支付功能已关闭'));
+      return;
+    }
     if (!selectedCreemProduct) {
       showError(t('请选择产品'));
       return;
@@ -316,33 +339,37 @@ const TopUp = ({ mode = 'all' }) => {
   };
 
   const waffoTopUp = async (payMethodIndex) => {
+    if (paymentDisabled) {
+      showError(t('支付功能已关闭'));
+      return;
+    }
     try {
-        if (topUpCount < waffoMinTopUp) {
-            showError(t('充值数量不能小于') + waffoMinTopUp);
-            return;
-        }
-        setPaymentLoading(true);
-        const requestBody = {
-            amount: parseInt(topUpCount),
-        };
-        if (payMethodIndex != null) {
-            requestBody.pay_method_index = payMethodIndex;
-        }
-        const res = await API.post('/api/user/waffo/pay', requestBody);
-        if (res !== undefined) {
-            const { message, data } = res.data;
-            if (message === 'success' && data?.payment_url) {
-                window.open(data.payment_url, '_blank');
-            } else {
-                showError(data || t('支付请求失败'));
-            }
+      if (topUpCount < waffoMinTopUp) {
+        showError(t('充值数量不能小于') + waffoMinTopUp);
+        return;
+      }
+      setPaymentLoading(true);
+      const requestBody = {
+        amount: parseInt(topUpCount),
+      };
+      if (payMethodIndex != null) {
+        requestBody.pay_method_index = payMethodIndex;
+      }
+      const res = await API.post('/api/user/waffo/pay', requestBody);
+      if (res !== undefined) {
+        const { message, data } = res.data;
+        if (message === 'success' && data?.payment_url) {
+          window.open(data.payment_url, '_blank');
         } else {
-            showError(res);
+          showError(data || t('支付请求失败'));
         }
+      } else {
+        showError(res);
+      }
     } catch (e) {
-        showError(t('支付请求失败'));
+      showError(t('支付请求失败'));
     } finally {
-        setPaymentLoading(false);
+      setPaymentLoading(false);
     }
   };
 
@@ -422,6 +449,8 @@ const TopUp = ({ mode = 'all' }) => {
       const res = await API.get('/api/user/topup/info');
       const { message, data, success } = res.data;
       if (success) {
+        const disabled = data.disable_payment || false;
+        setPaymentDisabled(disabled);
         setTopupInfo({
           amount_options: data.amount_options || [],
           discount: data.discount || {},
@@ -478,20 +507,28 @@ const TopUp = ({ mode = 'all' }) => {
           // 这个逻辑现在由后端处理，如果 Stripe 启用，后端会在 pay_methods 中包含它
 
           setPayMethods(payMethods);
-          const enableStripeTopUp = data.enable_stripe_topup || false;
-          const enableOnlineTopUp = data.enable_online_topup || false;
-          const enableCreemTopUp = data.enable_creem_topup || false;
+          const enableStripeTopUp = disabled
+            ? false
+            : data.enable_stripe_topup || false;
+          const enableOnlineTopUp = disabled
+            ? false
+            : data.enable_online_topup || false;
+          const enableCreemTopUp = disabled
+            ? false
+            : data.enable_creem_topup || false;
+          const enableWaffoTopUp = disabled
+            ? false
+            : data.enable_waffo_topup || false;
           const minTopUpValue = enableOnlineTopUp
             ? data.min_topup
             : enableStripeTopUp
               ? data.stripe_min_topup
-              : data.enable_waffo_topup
+              : enableWaffoTopUp
                 ? data.waffo_min_topup
                 : 1;
           setEnableOnlineTopUp(enableOnlineTopUp);
           setEnableStripeTopUp(enableStripeTopUp);
           setEnableCreemTopUp(enableCreemTopUp);
-          const enableWaffoTopUp = data.enable_waffo_topup || false;
           setEnableWaffoTopUp(enableWaffoTopUp);
           setWaffoPayMethods(data.waffo_pay_methods || []);
           setWaffoMinTopUp(data.waffo_min_topup || 1);
@@ -500,14 +537,25 @@ const TopUp = ({ mode = 'all' }) => {
 
           // 设置 Creem 产品
           try {
-            const products = JSON.parse(data.creem_products || '[]');
+            const products = disabled
+              ? []
+              : JSON.parse(data.creem_products || '[]');
             setCreemProducts(products);
           } catch (e) {
             setCreemProducts([]);
           }
 
+          if (disabled) {
+            setPresetAmounts([]);
+            setSelectedPreset(null);
+            setAmount(0);
+            setMinTopUp(1);
+            setTopUpCount(1);
+            return;
+          }
+
           // 如果没有自定义充值数量选项，根据最小充值金额生成预设充值额度选项
-          if (topupInfo.amount_options.length === 0) {
+          if ((data.amount_options || []).length === 0) {
             setPresetAmounts(generatePresetAmounts(minTopUpValue));
           }
 
@@ -603,12 +651,31 @@ const TopUp = ({ mode = 'all' }) => {
       // const minTopUpValue = statusState.status.min_topup || 1;
       // setMinTopUp(minTopUpValue);
       // setTopUpCount(minTopUpValue);
-      setTopUpLink(statusState.status.top_up_link || '');
+      setPaymentDisabled(statusState.status.disable_payment || false);
+      setTopUpLink(
+        statusState.status.disable_payment ? '' : statusState.status.top_up_link || '',
+      );
       setPriceRatio(statusState.status.price || 1);
 
       setStatusLoading(false);
     }
   }, [statusState?.status]);
+
+  useEffect(() => {
+    if (paymentDisabled) {
+      setEnableOnlineTopUp(false);
+      setEnableStripeTopUp(false);
+      setEnableCreemTopUp(false);
+      setEnableWaffoTopUp(false);
+      setPayMethods([]);
+      setCreemProducts([]);
+      setWaffoPayMethods([]);
+      setSubscriptionPlans([]);
+      setSelectedPreset(null);
+      setOpen(false);
+      setCreemOpen(false);
+    }
+  }, [paymentDisabled]);
 
   const renderAmount = () => {
     return amount + ' ' + t('元');
@@ -740,7 +807,7 @@ const TopUp = ({ mode = 'all' }) => {
         />
       )}
 
-      {showWalletSection && (
+      {showWalletSection && !paymentDisabled && (
         <PaymentConfirmModal
           t={t}
           open={open}
@@ -844,6 +911,7 @@ const TopUp = ({ mode = 'all' }) => {
             activeSubscriptions={activeSubscriptions}
             allSubscriptions={allSubscriptions}
             reloadSubscriptionSelf={getSubscriptionSelf}
+            paymentDisabled={paymentDisabled}
           />
         )}
         {showInviteSection && (

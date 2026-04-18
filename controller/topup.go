@@ -22,11 +22,13 @@ import (
 )
 
 func GetTopUpInfo(c *gin.Context) {
+	paymentDisabled := isPaymentDisabled()
+
 	// 获取支付方式
 	payMethods := operation_setting.PayMethods
 
 	// 如果启用了 Stripe 支付，添加到支付方法列表
-	if setting.StripeApiSecret != "" && setting.StripeWebhookSecret != "" && setting.StripePriceId != "" {
+	if !paymentDisabled && setting.StripeApiSecret != "" && setting.StripeWebhookSecret != "" && setting.StripePriceId != "" {
 		// 检查是否已经包含 Stripe
 		hasStripe := false
 		for _, method := range payMethods {
@@ -57,7 +59,7 @@ func GetTopUpInfo(c *gin.Context) {
 				setting.WaffoSandboxApiKey != "" &&
 				setting.WaffoSandboxPrivateKey != "" &&
 				setting.WaffoSandboxPublicCert != ""))
-	if enableWaffo {
+	if !paymentDisabled && enableWaffo {
 		hasWaffo := false
 		for _, method := range payMethods {
 			if method["type"] == "waffo" {
@@ -78,18 +80,29 @@ func GetTopUpInfo(c *gin.Context) {
 	}
 
 	data := gin.H{
-		"enable_online_topup": operation_setting.PayAddress != "" && operation_setting.EpayId != "" && operation_setting.EpayKey != "",
-		"enable_stripe_topup": setting.StripeApiSecret != "" && setting.StripeWebhookSecret != "" && setting.StripePriceId != "",
-		"enable_creem_topup":  setting.CreemApiKey != "" && setting.CreemProducts != "[]",
-		"enable_waffo_topup":  enableWaffo,
+		"disable_payment":     paymentDisabled,
+		"enable_online_topup": !paymentDisabled && operation_setting.PayAddress != "" && operation_setting.EpayId != "" && operation_setting.EpayKey != "",
+		"enable_stripe_topup": !paymentDisabled && setting.StripeApiSecret != "" && setting.StripeWebhookSecret != "" && setting.StripePriceId != "",
+		"enable_creem_topup":  !paymentDisabled && setting.CreemApiKey != "" && setting.CreemProducts != "[]",
+		"enable_waffo_topup":  !paymentDisabled && enableWaffo,
 		"waffo_pay_methods": func() interface{} {
-			if enableWaffo {
+			if !paymentDisabled && enableWaffo {
 				return setting.GetWaffoPayMethods()
 			}
 			return nil
 		}(),
-		"creem_products":   setting.CreemProducts,
-		"pay_methods":      payMethods,
+		"creem_products": func() string {
+			if paymentDisabled {
+				return "[]"
+			}
+			return setting.CreemProducts
+		}(),
+		"pay_methods": func() interface{} {
+			if paymentDisabled {
+				return []map[string]string{}
+			}
+			return payMethods
+		}(),
 		"min_topup":        operation_setting.MinTopUp,
 		"stripe_min_topup": setting.StripeMinTopUp,
 		"waffo_min_topup":  setting.WaffoMinTopUp,
@@ -163,6 +176,10 @@ func getMinTopup() int64 {
 }
 
 func RequestEpay(c *gin.Context) {
+	if isPaymentDisabled() {
+		c.JSON(200, gin.H{"message": "error", "data": "支付功能已关闭"})
+		return
+	}
 	var req EpayRequest
 	err := c.ShouldBindJSON(&req)
 	if err != nil {
@@ -345,6 +362,10 @@ func EpayNotify(c *gin.Context) {
 }
 
 func RequestAmount(c *gin.Context) {
+	if isPaymentDisabled() {
+		c.JSON(200, gin.H{"message": "error", "data": "支付功能已关闭"})
+		return
+	}
 	var req AmountRequest
 	err := c.ShouldBindJSON(&req)
 	if err != nil {

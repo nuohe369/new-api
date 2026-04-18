@@ -19,6 +19,10 @@ type SubscriptionCreemPayRequest struct {
 }
 
 func SubscriptionRequestCreemPay(c *gin.Context) {
+	if isPaymentDisabled() {
+		common.ApiErrorMsg(c, "支付功能已关闭")
+		return
+	}
 	var req SubscriptionCreemPayRequest
 
 	// Keep body for debugging consistency (like RequestCreemPay)

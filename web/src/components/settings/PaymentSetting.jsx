@@ -31,6 +31,7 @@ const PaymentSetting = () => {
   const { t } = useTranslation();
   let [inputs, setInputs] = useState({
     ServerAddress: '',
+    DisablePayment: false,
     PayAddress: '',
     EpayId: '',
     EpayKey: '',
@@ -97,6 +98,9 @@ const PaymentSetting = () => {
           case 'StripeUnitPrice':
           case 'StripeMinTopUp':
             newInputs[item.key] = parseFloat(item.value);
+            break;
+          case 'DisablePayment':
+            newInputs[item.key] = toBoolean(item.value);
             break;
           default:
             if (item.key.endsWith('Enabled')) {
